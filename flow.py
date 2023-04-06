@@ -41,3 +41,19 @@
 #                       ],
 #         ]
 #     ]
+
+
+# 2) Find and filter out Arbitrage oppertunities in the Prices
+# 2.1)
+# This object should take in the return value of the Price data aka the return value defined previousy above in 1.1
+# This object should return the same data structure as it took in and output a filtered version of it
+
+
+# 3) Router: find a *route for the arbitrage oppertunity
+# Take in the Filtered Price data from the Arbitrage object
+# *preferably the optimal route but this can be a optimized later and is irrelevant for simple routes i.e from one exchange to another
+# Output:
+
+# 4)Fees
+
+# 5)Evaluate
