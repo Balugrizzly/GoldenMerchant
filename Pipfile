@@ -5,6 +5,11 @@ name = "pypi"
 
 [packages]
 ccxt = "*"
+docplex = "*"
+numpy = "*"
+requests = "*"
+lxml = "*"
+pytz = "*"
 
 [dev-packages]
 
