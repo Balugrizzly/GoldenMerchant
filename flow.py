@@ -26,8 +26,8 @@
 #               [ price, amount ],
 #               ...
 #                   ],
-#
-#
+
+
 #         [BTC/USDT,kucoin,1499280391811
 #             'bids': [
 #               [ 28000, 1 ], // [ float, float ]
