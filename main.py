@@ -125,163 +125,115 @@ class PriceData:
             reversed_symbols.append(f"{quote}/{base}")
         return reversed_symbols
 
-    def get_orderbook_price(self, orderbook: Dict[str, List], action: str) -> float:
-        if action == "buy":
-            return orderbook["asks"][0][0]
-        elif action == "sell":
-            return orderbook["bids"][0][0]
+    def get_orderbook_price(
+        self, orderbook: Dict[str, List], action: str, reversed_pair: bool
+    ) -> float:
+        if reversed_pair:
+            if action == "buy":
+                return 1 / orderbook["bids"][0][0]
+            elif action == "sell":
+                return orderbook["asks"][0][0]
+            else:
+                raise ValueError("Invalid action. Use 'buy' or 'sell'.")
         else:
-            raise ValueError("Invalid action. Use 'buy' or 'sell'.")
+            if action == "buy":
+                return orderbook["asks"][0][0]
+            elif action == "sell":
+                return orderbook["bids"][0][0]
+            else:
+                raise ValueError("Invalid action. Use 'buy' or 'sell'.")
 
     def get_all_routes(self) -> List[Tuple[str]]:
-        all_symbols = self.symbols + self.get_reversed_symbols()
-        routes = []
-        for symbols_permutation in permutations(all_symbols, len(self.symbols)):
-            base, _ = symbols_permutation[0].split("/")
-            _, quote = symbols_permutation[-1].split("/")
-            if (
-                all(
-                    symbols_permutation[i] != self.symbols[i]
-                    for i in range(len(self.symbols))
-                )
-                and base == quote
-            ):
-                routes.append(symbols_permutation)
-        return routes
+        unique_currencies = set()
+        for symbol in self.symbols:
+            base, quote = symbol.split("/")
+            unique_currencies.add(base)
+            unique_currencies.add(quote)
 
-    def calculate_arbitrage_routes(self) -> List[Dict[str, Union[str, float, List]]]:
-        orderbooks = self.fetch_orderbooks()
-        routes = self.get_all_routes()
-        profitable_arbitrage_routes = []
+        valid_routes = []
 
-        for route in routes:
-            trades = []
+        for start_currency in unique_currencies:
+            for end_currency in unique_currencies:
+                if start_currency == end_currency:
+                    continue
 
-            for i, symbol in enumerate(route):
-                exchange_id, exchange = next(iter(self.exchanges.items()))
+                for path_length in range(2, len(unique_currencies)):
+                    for path in permutations(unique_currencies, path_length):
+                        if path[0] == start_currency and path[-1] == end_currency:
+                            route_symbols = [
+                                f"{path[i]}/{path[i + 1]}" for i in range(len(path) - 1)
+                            ]
+                            route_symbols.append(f"{end_currency}/{start_currency}")
+                            if all(
+                                [
+                                    symbol in self.symbols
+                                    or f"{symbol.split('/')[1]}/{symbol.split('/')[0]}"
+                                    in self.symbols
+                                    for symbol in route_symbols
+                                ]
+                            ):
+                                valid_routes.append(tuple(route_symbols))
 
-                if symbol not in [o[0] for o in orderbooks if o[1] == exchange_id]:
-                    symbol_reversed = f"{symbol.split('/')[1]}/{symbol.split('/')[0]}"
-                    reversed_orderbook = [
-                        o[3]
-                        for o in orderbooks
-                        if o[0] == symbol_reversed and o[1] == exchange_id
-                    ][0]
-                    action = "sell" if i % 2 == 0 else "buy"
-                    price, amount = self.get_orderbook_price_and_amount(
-                        reversed_orderbook, action
-                    )
-                    symbol = symbol_reversed
-                else:
-                    orderbook = [
-                        o[3]
-                        for o in orderbooks
-                        if o[0] == symbol and o[1] == exchange_id
-                    ][0]
-                    action = "buy" if i % 2 == 0 else "sell"
-                    price, amount = self.get_orderbook_price_and_amount(
-                        orderbook, action
-                    )
+        return valid_routes
 
-                trades.append(
-                    {
-                        "symbol": symbol,
-                        "exchange": exchange_id,
-                        "action": action,
-                        "price": price,
-                        "amount": amount,
-                    }
-                )
-
-            min_trade_amount = min([trade["amount"] for trade in trades])
-
-            total_profit = min_trade_amount
-            for i, trade in enumerate(trades):
-                action = trade["action"]
-                price = trade["price"]
-                total_profit = (
-                    total_profit / price if action == "buy" else total_profit * price
-                )
-
-            profit = total_profit - min_trade_amount
-            currency = route[-1].split("/")[1]
-
-            if profit > 0:
-                profitable_arbitrage_routes.append(
-                    {
-                        "route": route,
-                        "profit": f"{profit:.2f} {currency}",
-                        "trades": trades,
-                    }
-                )
-
-        return profitable_arbitrage_routes
-
-    def get_orderbook_price_and_amount(
-        self, orderbook: Dict[str, List[Tuple[float, float]]], action: str
-    ) -> Tuple[float, float]:
-        """
-        Get the best price and corresponding amount from the orderbook based on the action (buy or sell).
-
-        Args:
-        - orderbook (Dict[str, List[Tuple[float, float]]]): The orderbook containing bids and asks.
-        - action (str): The action to be performed, either "buy" or "sell".
-
-        Returns:
-        A tuple containing the best price and corresponding amount.
-        """
-        if action == "buy":
-            best_price, amount = orderbook["asks"][0]
-        elif action == "sell":
-            best_price, amount = orderbook["bids"][0]
-        else:
-            raise ValueError("Invalid action. Must be 'buy' or 'sell'.")
-        return best_price, amount
+    def is_reversed_pair(self, symbol: str, exchange_id: str) -> bool:
+        return (
+            symbol not in self.exchanges[exchange_id].symbols
+            and f"{symbol.split('/')[1]}/{symbol.split('/')[0]}"
+            in self.exchanges[exchange_id].symbols
+        )
 
 
 if __name__ == "__main__":
     try:
         p = PriceData(
             exchange_ids=["kucoin", "phemex"],
-            symbols=["BTC/USDT", "ETH/USDT", "LTC/USDT"]
-            # symbols=[
-            #     "BTC/USDT",
-            #     "USDT/BTC",
-            #     "ETH/USDT",
-            #     "USDT/ETH",
-            #     "LTC/USDT",
-            #     "USDT/LTC",
-            #     "BNB/USDT",
-            #     "USDT/BNB",
-            #     "DOGE/USDT",
-            #     "USDT/DOGE",
-            #     "ADA/USDT",
-            #     "USDT/ADA",
-            #     "XRP/USDT",
-            #     "USDT/XRP",
-            #     "BTC/USDC",
-            #     "USDC/BTC",
-            #     "ETH/USDC",
-            #     "USDC/ETH",
-            #     "LTC/USDC",
-            #     "USDC/LTC",
-            #     "BNB/USDC",
-            #     "USDC/BNB",
-            #     "DOGE/USDC",
-            #     "USDC/DOGE",
-            #     "ADA/USDC",
-            #     "USDC/ADA",
-            #     "XRP/USDC",
-            #     "USDC/XRP",
-            #     "USDC/USDT",
-            #     "USDT/USDC",
-            # ],
+            symbols=[
+                "BTC/USDT",
+                "ETH/USDT",
+                "LTC/USDT",
+                "BTC/USDC",
+                "ETH/USDC",
+                "LTC/USDC",
+                "BTC/ETH",
+            ],
         )
-        # print(p.get_all_routes())
-        x = p.calculate_arbitrage_routes()
-        for opp in x:
-            print(opp)
+        print(p.get_all_routes())
 
     except Exception as e:
         print(f"An error occurred: {e}")
         print(traceback.format_exc())
+    # symbols = (
+    #     [
+    #         "BTC/USDT",
+    #         "USDT/BTC",
+    #         "ETH/USDT",
+    #         "USDT/ETH",
+    #         "LTC/USDT",
+    #         "USDT/LTC",
+    #         "BNB/USDT",
+    #         "USDT/BNB",
+    #         "DOGE/USDT",
+    #         "USDT/DOGE",
+    #         "ADA/USDT",
+    #         "USDT/ADA",
+    #         "XRP/USDT",
+    #         "USDT/XRP",
+    #         "BTC/USDC",
+    #         "USDC/BTC",
+    #         "ETH/USDC",
+    #         "USDC/ETH",
+    #         "LTC/USDC",
+    #         "USDC/LTC",
+    #         "BNB/USDC",
+    #         "USDC/BNB",
+    #         "DOGE/USDC",
+    #         "USDC/DOGE",
+    #         "ADA/USDC",
+    #         "USDC/ADA",
+    #         "XRP/USDC",
+    #         "USDC/XRP",
+    #         "USDC/USDT",
+    #         "USDT/USDC",
+    #     ],
+    # )
