@@ -21,14 +21,19 @@ def get_withdrawal_fees(exchange, trading_size=1000):
 
         for ele in tree.xpath("//tbody//tr"):
             coin_name = ele.xpath('.//div[@class="symbol"]/text()')[0]
-            usd_fee = ele.xpath(
-                './/td[@class="withdrawalFee"]//div[@class="usd"]/text()'
-            )[0]
-            coin_fee = (
-                ele.xpath('.//td[@class="withdrawalFee"]//div[@class="fee"]/text()')[0]
-                if usd_fee != "FREE"
-                else "FREE"
-            )
+            # usd_fee = ele.xpath(
+            #     './/td[@class="withdrawalFee"]//div[@class="usd"]/text()'
+            # )[0]
+
+            usd_fee = "0"
+
+            # coin_fee = (
+            #     ele.xpath('.//td[@class="withdrawalFee"]//div[@class="fee"]/text()')[0]
+            #     if usd_fee != "FREE"
+            #     else "FREE"
+            # )
+
+            coin_fee = "FREE"
 
             usd_fee = (
                 0 if usd_fee == "FREE" else float(re.findall(r"[0-9\.]+", usd_fee)[0])
@@ -50,6 +55,9 @@ def get_withdrawal_fees(exchange, trading_size=1000):
         )
 
 
+import os
+
+
 def get_crypto_prices(coin_set, convert="USD"):
     """fetch crypto currencies price from coin market cap api"""
     coin_set = set([i for i in coin_set if i.isalpha()])
@@ -58,7 +66,7 @@ def get_crypto_prices(coin_set, convert="USD"):
     parameters = {"symbol": ",".join(coin_set), "convert": convert}
     headers = {
         "Accepts": "application/json",
-        "X-CMC_PRO_API_KEY": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "X-CMC_PRO_API_KEY": os.environ.get(f"CMC_API_KEY"),
     }
 
     session = Session()

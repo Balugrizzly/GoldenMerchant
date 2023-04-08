@@ -1,5 +1,7 @@
 from router import PathOptimizer
 from exchanges import exchanges
+import requests
+from lxml import html
 
 if __name__ == "__main__":
 
@@ -11,7 +13,7 @@ if __name__ == "__main__":
     path_optimizer = PathOptimizer(
         exchanges=exchanges,
         path_length=10,
-        simulated_bal=simulated_bal,
+        simulated_bal=None,
         interex_trading_size=2000,
         min_trading_limit=100,
     )
