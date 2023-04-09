@@ -171,7 +171,20 @@ class PriceDataGraph:
 
 
 if __name__ == "__main__":
-    symbols = ["BTC/USDT", "ETH/USDT", "LTC/USDT", "ETH/BTC"]
+    symbols = [
+        "BTC/USDT",
+        "ETH/USDT",
+        "LTC/USDT",
+        "ETH/BTC",
+        "BTC/USDC",
+        "ETH/USDC",
+        "LTC/USDC",
+        "USDC/USDT",
+        "BTC/DAI",
+        "ETH/DAI",
+        "LTC/DAI",
+        "DAI/USDT",
+    ]
     exchange_ids = ["kucoin", "phemex"]
     n_best = 25
     transaction_fee = 0.0
@@ -182,7 +195,7 @@ if __name__ == "__main__":
     print(price_data_graph.graph)
 
     start_currency = "USDT"
-    max_depth = 5
+    max_depth = 10
     cyclic_paths = price_data_graph.find_cyclic_paths(start_currency, max_depth)
     print("Cyclic Paths")
     for path in cyclic_paths:
