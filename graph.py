@@ -97,20 +97,29 @@ class PriceDataGraph:
                     graph[quote] = {}
 
                 # Add consolidated bid and ask to graph
-                graph[base][quote] = {
-                    "exchange": exchange_id,
-                    "rate": -math.log(bid_price),
-                    "amount": bid_volume,
-                    "type": "bid",
-                    "price": bid_price,
-                }
-                graph[quote][base] = {
-                    "exchange": exchange_id,
-                    "rate": math.log(ask_price),
-                    "amount": ask_volume,
-                    "type": "ask",
-                    "price": ask_price,
-                }
+                if quote not in graph[base]:
+                    graph[base][quote] = []
+                if base not in graph[quote]:
+                    graph[quote][base] = []
+
+                graph[base][quote].append(
+                    {
+                        "exchange": exchange_id,
+                        "rate": -math.log(bid_price),
+                        "amount": bid_volume,
+                        "type": "bid",
+                        "price": bid_price,
+                    }
+                )
+                graph[quote][base].append(
+                    {
+                        "exchange": exchange_id,
+                        "rate": math.log(ask_price),
+                        "amount": ask_volume,
+                        "type": "ask",
+                        "price": ask_price,
+                    }
+                )
 
             except Exception as e:
                 print(
@@ -119,9 +128,50 @@ class PriceDataGraph:
 
         return graph
 
+    def find_cyclic_paths(
+        self, start_currency: str, max_depth: int = 5
+    ) -> List[List[Dict[str, Any]]]:
+        """
+        Find all cyclic paths in the graph starting and ending with the specified currency.
+
+        Parameters:
+        start_currency (str): The starting and ending currency for the cyclic path.
+        max_depth (int): The maximum number of intermediate currencies allowed in a path.
+
+        Returns:
+        A list of cyclic paths, with each path represented as a list of dictionaries containing trade information.
+        """
+
+        def dfs(currency, current_path, depth):
+            if depth == 0:
+                return
+
+            for next_currency, trades in self.graph[currency].items():
+                for trade in trades:
+                    trade_with_currencies = {
+                        "source_currency": currency,
+                        "destination_currency": next_currency,
+                        **trade,
+                    }
+                    if next_currency == start_currency:
+                        paths.append(current_path + [trade_with_currencies])
+                    elif next_currency not in visited:
+                        visited.add(next_currency)
+                        dfs(
+                            next_currency,
+                            current_path + [trade_with_currencies],
+                            depth - 1,
+                        )
+                        visited.remove(next_currency)
+
+        paths = []
+        visited = set([start_currency])
+        dfs(start_currency, [], max_depth)
+        return paths
+
 
 if __name__ == "__main__":
-    symbols = ["BTC/USDT", "ETH/USDT", "LTC/USDT"]
+    symbols = ["BTC/USDT", "ETH/USDT", "LTC/USDT", "ETH/BTC"]
     exchange_ids = ["kucoin", "phemex"]
     n_best = 25
     transaction_fee = 0.0
@@ -130,3 +180,13 @@ if __name__ == "__main__":
     price_data_graph = PriceDataGraph(exchange_ids, symbols, n_best)
     print("Graph")
     print(price_data_graph.graph)
+
+    start_currency = "USDT"
+    max_depth = 5
+    cyclic_paths = price_data_graph.find_cyclic_paths(start_currency, max_depth)
+    print("Cyclic Paths")
+    for path in cyclic_paths:
+        print("Path")
+        print("Base currency:", start_currency)
+        for trade in path:
+            print(trade)
