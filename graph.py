@@ -82,12 +82,13 @@ class PriceDataGraph:
                 )
 
                 # Factor in transaction fee and slippage
-                bid_price *= 1 + transaction_fee
-                bid_price *= 1 - slippage
-                ask_price *= 1 - transaction_fee
-                ask_price *= 1 + slippage
+                bid_price *= 1 - transaction_fee
+                bid_price *= 1 + slippage
+                ask_price *= 1 + transaction_fee
+                ask_price *= 1 - slippage
 
                 # Calculate total bid and ask volumes
+
                 bid_volume = sum([bid[1] for bid in bids])
                 ask_volume = sum([ask[1] for ask in asks])
 
@@ -169,6 +170,29 @@ class PriceDataGraph:
         dfs(start_currency, [], max_depth)
         return paths
 
+    def evaluate_paths(self, paths: List[List[Dict[str, Any]]]) -> List[float]:
+        """
+        Evaluate the series of trades in each path and calculate the profit or cost associated with each path.
+
+        Parameters:
+        paths (List[List[Dict[str, Any]]]): A list of cyclic paths, with each path represented as a list of trade dictionaries.
+
+        Returns:
+        A list of profit or cost values associated with each path.
+        """
+        results = []
+
+        for path in paths:
+            cost = 1.0
+
+            for trade in path:
+                rate = trade["w_avg_rate"]
+                cost *= math.exp(rate)
+
+            results.append(cost)
+
+        return results
+
 
 if __name__ == "__main__":
     symbols = [
@@ -197,9 +221,12 @@ if __name__ == "__main__":
     start_currency = "USDT"
     max_depth = 10
     cyclic_paths = price_data_graph.find_cyclic_paths(start_currency, max_depth)
-    print("Cyclic Paths")
-    for path in cyclic_paths:
-        print("Path")
+    path_evaluations = price_data_graph.evaluate_paths(cyclic_paths)
+
+    print("Cyclic Paths and Evaluations")
+    for i, (path, evaluation) in enumerate(zip(cyclic_paths, path_evaluations)):
+        print(f"Path {i+1}")
         print("Base currency:", start_currency)
         for trade in path:
             print(trade)
+        print("Evaluation:", evaluation)
