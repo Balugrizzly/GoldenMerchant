@@ -195,20 +195,10 @@ class PriceDataGraph:
 
 
 if __name__ == "__main__":
-    symbols = [
-        "BTC/USDT",
-        "ETH/USDT",
-        "LTC/USDT",
-        "ETH/BTC",
-        "BTC/USDC",
-        "ETH/USDC",
-        "LTC/USDC",
-        "USDC/USDT",
-        "BTC/DAI",
-        "ETH/DAI",
-        "LTC/DAI",
-        "DAI/USDT",
-    ]
+    tokens = ["BTC", "ETH", "LTC", "USDC", "DAI", "USDT"]
+    symbols = list(itertools.permutations(tokens, 2))
+    symbols = ["/".join(symbol) for symbol in symbols]
+
     exchange_ids = ["kucoin", "phemex"]
     n_best = 25
     transaction_fee = 0.0
