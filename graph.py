@@ -105,19 +105,19 @@ class PriceDataGraph:
                 graph[base][quote].append(
                     {
                         "exchange": exchange_id,
-                        "rate": -math.log(bid_price),
+                        "w_avg_rate": -math.log(bid_price),
                         "amount": bid_volume,
                         "type": "bid",
-                        "price": bid_price,
+                        "w_avg_price": bid_price,
                     }
                 )
                 graph[quote][base].append(
                     {
                         "exchange": exchange_id,
-                        "rate": math.log(ask_price),
+                        "w_avg_rate": math.log(ask_price),
                         "amount": ask_volume,
                         "type": "ask",
-                        "price": ask_price,
+                        "w_avg_price": ask_price,
                     }
                 )
 
