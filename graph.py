@@ -170,26 +170,51 @@ class PriceDataGraph:
         dfs(start_currency, [], max_depth)
         return paths
 
-    def evaluate_paths(self, paths: List[List[Dict[str, Any]]]) -> List[float]:
+    def evaluate_paths(
+        self, paths: List[List[Dict[str, Any]]], start_amount: float
+    ) -> List[Dict[str, Any]]:
         """
         Evaluate the series of trades in each path and calculate the profit or cost associated with each path.
+        Show the changes in amounts for all currencies throughout the arbitrage cycle.
 
         Parameters:
         paths (List[List[Dict[str, Any]]]): A list of cyclic paths, with each path represented as a list of trade dictionaries.
+        start_amount (float): The starting amount of the base currency.
 
         Returns:
-        A list of profit or cost values associated with each path.
+        A list of dictionaries, each containing the profit and a list of intermediate amounts for each path.
         """
         results = []
 
         for path in paths:
-            cost = 1.0
+            current_amount = start_amount
+            intermediate_amounts = []
 
             for trade in path:
-                rate = trade["w_avg_rate"]
-                cost *= math.exp(rate)
+                src_currency = trade["source_currency"]
+                dst_currency = trade["destination_currency"]
+                exchange_rate = trade["w_avg_price"]
 
-            results.append(cost)
+                if trade["type"] == "ask":
+                    converted_amount = current_amount / exchange_rate
+                else:  # "bid"
+                    converted_amount = current_amount * exchange_rate
+
+                intermediate_amounts.append(
+                    {
+                        "src_currency": src_currency,
+                        "dst_currency": dst_currency,
+                        "src_amount": current_amount,
+                        "dst_amount": converted_amount,
+                        "exchange": trade["exchange"],
+                    }
+                )
+                current_amount = converted_amount
+
+            profit = current_amount - start_amount
+            results.append(
+                {"profit": profit, "intermediate_amounts": intermediate_amounts}
+            )
 
         return results
 
@@ -201,8 +226,8 @@ if __name__ == "__main__":
 
     exchange_ids = ["kucoin", "phemex"]
     n_best = 25
-    transaction_fee = 0.0
-    slippage = 0.0
+    transaction_fee = 0.0025
+    slippage = 0
 
     price_data_graph = PriceDataGraph(exchange_ids, symbols, n_best)
     print("Graph")
@@ -211,12 +236,15 @@ if __name__ == "__main__":
     start_currency = "USDT"
     max_depth = 10
     cyclic_paths = price_data_graph.find_cyclic_paths(start_currency, max_depth)
-    path_evaluations = price_data_graph.evaluate_paths(cyclic_paths)
+    start_amount = 20000.0
+    path_evaluations = price_data_graph.evaluate_paths(cyclic_paths, start_amount)
 
-    print("Cyclic Paths and Evaluations")
-    for i, (path, evaluation) in enumerate(zip(cyclic_paths, path_evaluations)):
-        print(f"Path {i+1}")
-        print("Base currency:", start_currency)
-        for trade in path:
-            print(trade)
-        print("Evaluation:", evaluation)
+    print("\nPath Evaluations")
+    for i, evaluation in enumerate(path_evaluations):
+        print(f"Path {i+1}:")
+        print(cyclic_paths[i])
+        for step in evaluation["intermediate_amounts"]:
+            print(
+                f"{step['src_amount']:.4f} {step['src_currency']} -> {step['dst_amount']:.4f} {step['dst_currency']} on {step['exchange']}"
+            )
+        print(f"Profit: {evaluation['profit']:.4f} {start_currency}")
