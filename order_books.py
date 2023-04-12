@@ -24,7 +24,7 @@ class OrderBooks:
 
     def fetch_orderbooks(self, depth: int = 100) -> List[List]:
         """
-        Fetches the order books for each symbol on each exchange in the instance's list of exchange IDs.
+        Fetches the order books for each symbol on each exchange.
 
         Args:
         - depth (int): The number of price levels to fetch from the order book (default=100).
