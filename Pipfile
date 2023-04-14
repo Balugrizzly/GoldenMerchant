@@ -5,6 +5,7 @@ name = "pypi"
 
 [packages]
 ccxt = "*"
+networkx = {extras = ["default"], version = "*"}
 
 [dev-packages]
 
